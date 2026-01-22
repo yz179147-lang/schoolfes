@@ -1,1 +1,444 @@
-# schoolfes
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>校慶大作戰：鬼屋企劃</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* 黑板粉筆配色 */
+            --board-bg: #2b3a42; /* 深綠黑板色 */
+            --board-border: #8d6e63; /* 木框色 */
+            --chalk-white: #fcfcfc;
+            --chalk-yellow: #fff59d;
+            --chalk-pink: #ffccbc;
+            --chalk-blue: #b3e5fc;
+            --chalk-green: #c8e6c9;
+            --eraser-dust: rgba(255,255,255,0.1);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Patrick Hand', 'Noto Sans TC', sans-serif; /* 手寫字體感 */
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23cccccc' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            overscroll-behavior: none; 
+        }
+
+        .blackboard {
+            background-color: var(--board-bg);
+            border: 12px solid var(--board-border);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 950px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3), inset 0 0 40px rgba(0,0,0,0.5);
+            padding: 30px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            max-height: 95vh;
+            overflow-y: auto;
+            color: var(--chalk-white);
+        }
+
+        /* 粉筆灰質感 */
+        .blackboard::before {
+            content: ''; position: absolute; top:0; left:0; width:100%; height:100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 裝飾：板擦與粉筆 */
+        .blackboard::after {
+            content: ' '; 
+            position: absolute; bottom: 10px; right: 20px;
+            width: 80px; height: 30px;
+            background: repeating-linear-gradient(45deg, #d7ccc8, #d7ccc8 5px, #8d6e63 5px, #8d6e63 10px);
+            border-radius: 4px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px dashed rgba(255,255,255,0.3);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            z-index: 1;
+        }
+
+        h2 { 
+            margin: 0; font-size: 2.2rem; 
+            color: var(--chalk-yellow);
+            font-weight: normal;
+            letter-spacing: 2px;
+            transform: rotate(-1deg);
+        }
+
+        .class-info {
+            text-align: right;
+            font-size: 1.2rem;
+            color: var(--chalk-blue);
+        }
+
+        /* 故事區域 */
+        .chalk-box {
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; /* 手繪框線效果 */
+            padding: 20px;
+            margin-bottom: 25px;
+            font-size: 1.4rem;
+            line-height: 1.6;
+            z-index: 1;
+        }
+
+        /* Visual Area */
+        .visual-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 250px;
+            margin-bottom: 25px;
+            z-index: 1;
+        }
+
+        /* Drawing Components */
+        /* Table */
+        .chalk-table {
+            width: 100%; border-collapse: collapse; font-size: 1.3rem;
+        }
+        .chalk-table th, .chalk-table td {
+            border: 2px solid var(--chalk-white);
+            padding: 12px; text-align: center;
+        }
+        .chalk-table th { color: var(--chalk-pink); }
+        
+        /* Classroom Grid */
+        .floor-plan {
+            display: grid;
+            grid-template-columns: repeat(8, 40px); /* 8列 */
+            gap: 2px;
+            padding: 10px;
+            border: 3px solid var(--chalk-white);
+        }
+        .tile {
+            width: 40px; height: 40px;
+            border: 1px dashed rgba(255,255,255,0.3);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.2rem;
+        }
+        .tile.desk { background: rgba(141, 110, 99, 0.4); } /* 桌椅區 */
+        .tile.ghost { background: rgba(179, 229, 252, 0.3); color: var(--chalk-blue); } /* 鬼屋區 */
+        .tile.door { border: 2px solid var(--chalk-yellow); color: var(--chalk-yellow); font-weight: bold; }
+
+        /* Door Angle Visual */
+        .door-visual {
+            width: 200px; height: 200px; position: relative;
+        }
+        .wall {
+            position: absolute; left: 100px; top: 0; bottom: 0; width: 4px; background: var(--chalk-white);
+        }
+        .door-frame {
+            position: absolute; top: 100px; left: 100px; width: 80px; height: 6px;
+            background: var(--chalk-yellow); transform-origin: left center;
+            transition: transform 1s;
+        }
+        .angle-arc {
+            position: absolute; top: 70px; left: 70px; width: 60px; height: 60px;
+            border: 2px dotted var(--chalk-pink); border-radius: 50%;
+            clip-path: polygon(50% 50%, 100% 0, 100% 100%);
+        }
+
+        /* Inputs */
+        .input-group { display: flex; gap: 15px; z-index: 1; margin-top: 20px; }
+        
+        input[type="number"] {
+            flex: 1; padding: 15px; border: none; border-bottom: 3px solid var(--chalk-white);
+            background: transparent; color: var(--chalk-white);
+            font-size: 1.8rem; text-align: center; font-family: 'Patrick Hand', sans-serif;
+            outline: none;
+        }
+        input::placeholder { color: rgba(255,255,255,0.3); }
+
+        button {
+            padding: 10px 30px; border: 2px solid var(--chalk-white);
+            border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+            background: transparent; color: var(--chalk-white);
+            font-size: 1.4rem; cursor: pointer; font-family: 'Patrick Hand', sans-serif;
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+        
+        .btn-main { border-color: var(--chalk-yellow); color: var(--chalk-yellow); font-weight: bold; }
+        .btn-opt { flex: 1; margin: 0 5px; }
+        .btn-opt.selected { background: var(--chalk-white); color: var(--board-bg); }
+
+        /* Feedback */
+        .stamp {
+            margin-top: 20px; padding: 15px; 
+            border: 3px solid; border-radius: 10px;
+            text-align: center; font-size: 1.5rem; transform: rotate(-2deg);
+            display: none; animation: stampIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 5;
+        }
+        .stamp.correct { border-color: var(--chalk-green); color: var(--chalk-green); border-style: double; }
+        .stamp.wrong { border-color: var(--chalk-pink); color: var(--chalk-pink); border-style: dashed; }
+
+        @keyframes stampIn { from { transform: scale(1.5) rotate(10deg); opacity: 0; } to { transform: scale(1) rotate(-2deg); opacity: 1; } }
+
+        .hidden { display: none !important; }
+
+        /* Progress - Chalk line style */
+        .progress-line {
+            width: 100%; height: 4px; background: rgba(255,255,255,0.2);
+            margin-top: 10px; position: relative;
+        }
+        .progress-chalk {
+            height: 100%; background: var(--chalk-yellow); width: 0%;
+            box-shadow: 0 0 5px var(--chalk-yellow); transition: width 0.5s;
+        }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            .floor-plan { grid-template-columns: repeat(8, 30px); }
+            .tile { width: 30px; height: 30px; font-size: 0.9rem; }
+            .input-group { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="blackboard">
+    <div class="header">
+        <h2>👻 校慶鬼屋企劃</h2>
+        <div class="class-info">
+            三年二班<br>
+            <div class="progress-line"><div class="progress-chalk" id="progress-bar"></div></div>
+        </div>
+    </div>
+
+    <div id="intro-screen">
+        <div class="chalk-box">
+            <span style="color:var(--chalk-yellow)">嗨，總召！</span><br><br>
+            校慶園遊會要到了，我們班決定要做「恐怖教室」！<br>
+            但是，訓導主任說：「企劃書要算得清清楚楚才能通過。」<br><br>
+            你需要幫忙計算：<br>
+            1. 🎟️ <strong>團體票的收入</strong> (乘法)<br>
+            2. 📐 <strong>嚇人機關的角度</strong> (角度)<br>
+            3. 🏚️ <strong>鬼屋的布置面積</strong> (面積)<br><br>
+            拿起粉筆，我們開始規劃吧！
+        </div>
+        <div style="text-align: center; margin-top: 40px;">
+            <button class="btn-main" onclick="startGame()" style="font-size: 1.6rem; padding: 15px 50px;">打開企劃書 📖</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div class="chalk-box" id="q-text">Loading...</div>
+        
+        <div class="visual-area" id="q-visual">
+            </div>
+
+        <div id="input-number" class="input-group hidden">
+            <input type="number" id="user-input" placeholder="在這裡寫下答案..." inputmode="decimal">
+            <button class="btn-main" onclick="submitAnswer()">交卷！</button>
+        </div>
+
+        <div id="input-options" class="input-group hidden">
+            </div>
+
+        <div class="stamp" id="feedback"></div>
+
+        <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+            <button class="btn-opt" style="font-size:1rem; border:1px dashed rgba(255,255,255,0.5);" onclick="showHint()">👀 偷看小抄 (提示)</button>
+            <button id="btn-next" class="hidden btn-main" onclick="nextLevel()">下一頁 ➡️</button>
+        </div>
+    </div>
+
+    <div id="end-screen" class="hidden" style="text-align: center;">
+        <h1 style="color: var(--chalk-yellow); font-size: 3rem;">企劃通過！🎉</h1>
+        <div class="chalk-box" style="text-align: center;">
+            太棒了！所有的計算都正確。<br>
+            訓導主任蓋上了「通過」的印章。<br>
+            三年二班的鬼屋一定會大受歡迎！
+        </div>
+        <div style="margin: 30px 0; font-size: 2rem;">
+            獲得班費： <span id="final-score" style="color:var(--chalk-pink); text-decoration: underline;">0</span> 元
+        </div>
+        <button class="btn-main" onclick="location.reload()">重新規劃</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        // Level 1: Multiplication (Logic & Money)
+        {
+            type: "number",
+            text: "【第一章：門票定價】<br>為了吸引更多人，我們推出了「勇氣團體票」！<br>👻 <strong>單人票：每張 50 元</strong><br>👻 <strong>團體票 (4人一組)：每組 160 元</strong><br><br>現在門口來了 <strong>5 組團體</strong> 和 <strong>3 位散客</strong>。<br>請問：我們總共可以收到多少錢？",
+            visual: `
+                <div style="font-size: 3rem; text-align: center;">
+                    👥👥👥👥👥 <span style="font-size:1rem">(5組)</span><br>
+                    👤👤👤 <span style="font-size:1rem">(3人)</span>
+                </div>
+            `,
+            answer: 950,
+            hint: "分開算算看：\n1. 5 組團體票是多少錢？ (5 x 160)\n2. 3 張單人票是多少錢？ (3 x 50)\n3. 最後加起來！",
+            explanation: "團體票收入：5 x 160 = 800 元<br>單人票收入：3 x 50 = 150 元<br>總收入：800 + 150 = 950 元。<br>賺翻了！"
+        },
+        // Level 2: Angles (Comparison)
+        {
+            type: "option",
+            options: ["吸血鬼棺材", "木乃伊櫃子", "一樣大"],
+            text: "【第二章：嚇人機關】<br>我們設計了兩個機關，門打開的角度不同：<br>⚰️ <strong>吸血鬼棺材</strong>：門打開是一個「鈍角」。<br>🤕 <strong>木乃伊櫃子</strong>：門打開是一個「直角」。<br><br>請問：哪一個機關的門「張開得比較大」？",
+            visual: `
+                <div style="display:flex; gap:30px; align-items:flex-end;">
+                    <div style="text-align:center;">
+                        <div style="width:50px; height:50px; border-left:4px solid white; border-bottom:4px solid white; transform: skewX(-20deg);"></div>
+                        <small>吸血鬼 (鈍)</small>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="width:50px; height:50px; border-left:4px solid white; border-bottom:4px solid white;"></div>
+                        <small>木乃伊 (直)</small>
+                    </div>
+                </div>
+            `,
+            answer: "吸血鬼棺材",
+            hint: "想想看角度的大小關係：\n鈍角 > 直角 > 銳角。\n誰比直角(90度)還要大？",
+            explanation: "鈍角大於 90 度，直角等於 90 度。<br>所以吸血鬼棺材的門張得比較開，更容易跳出來嚇人！"
+        },
+        // Level 3: Area (Composite Shape/Subtraction)
+        {
+            type: "number",
+            text: "【第三章：教室佈置】<br>我們的教室原本是 <strong>8公尺 x 6公尺</strong> 的長方形。<br>為了安全，我們在角落保留了一塊 <strong>3公尺 x 3公尺</strong> 的「安全休息區」(不佈置)。<br><br>請問：剩下的「鬼屋探險區」面積是多少平方公尺？",
+            visual: `
+                <div class="floor-plan">
+                    <div class="tile ghost" style="grid-column: span 8; grid-row: span 3;">鬼屋區</div>
+                    <div class="tile ghost" style="grid-column: span 5; grid-row: span 3;">鬼屋區</div>
+                    <div class="tile desk" style="grid-column: span 3; grid-row: span 3; border:2px solid var(--chalk-green); color:var(--chalk-green);">休息區<br>3x3</div>
+                </div>
+                <small style="margin-top:5px; color:var(--chalk-blue);">整間教室：8x6</small>
+            `,
+            answer: 39,
+            hint: "方法一：算出整間教室面積 (8x6)，減去休息區面積 (3x3)。\n方法二：切割成兩個長方形來算。",
+            explanation: "教室總面積：8 x 6 = 48。<br>休息區面積：3 x 3 = 9。<br>鬼屋面積：48 - 9 = 39 平方公尺。<br>空間很大，可以放很多鬼！"
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+
+    // Enter key support
+    document.getElementById('user-input').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') submitAnswer();
+    });
+
+    function startGame() {
+        document.getElementById('intro-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        const q = questions[currentIdx];
+        
+        // Reset UI
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('feedback').className = 'stamp';
+        document.getElementById('btn-next').classList.add('hidden');
+        document.getElementById('user-input').value = '';
+        document.getElementById('user-input').disabled = false;
+        
+        // Update Progress
+        document.getElementById('progress-bar').style.width = `${(currentIdx / questions.length) * 100}%`;
+        
+        // Render Text & Visual
+        document.getElementById('q-text').innerHTML = q.text;
+        document.getElementById('q-visual').innerHTML = q.visual;
+
+        // Render Inputs
+        const numInput = document.getElementById('input-number');
+        const optInput = document.getElementById('input-options');
+
+        if (q.type === 'number') {
+            numInput.classList.remove('hidden');
+            optInput.classList.add('hidden');
+            // document.getElementById('user-input').focus();
+        } else {
+            numInput.classList.add('hidden');
+            optInput.classList.remove('hidden');
+            optInput.innerHTML = '';
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-opt';
+                btn.innerText = opt;
+                btn.onclick = () => checkOption(opt, btn);
+                optInput.appendChild(btn);
+            });
+        }
+    }
+
+    function showHint() {
+        const q = questions[currentIdx];
+        alert("🔍 小抄提示：\n" + q.hint);
+    }
+
+    function submitAnswer() {
+        const val = document.getElementById('user-input').value;
+        if (!val) return;
+        checkResult(parseFloat(val) === questions[currentIdx].answer);
+    }
+
+    function checkOption(val, btn) {
+        document.querySelectorAll('.btn-opt').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        checkResult(val === questions[currentIdx].answer);
+    }
+
+    function checkResult(isCorrect) {
+        const fb = document.getElementById('feedback');
+        fb.style.display = 'block';
+
+        if (isCorrect) {
+            score += 1000; // 班費
+            fb.innerHTML = `💯 <strong>答對了！</strong><br>${questions[currentIdx].explanation}`;
+            fb.className = 'stamp correct';
+            
+            // Lock UI
+            document.getElementById('user-input').disabled = true;
+            document.querySelectorAll('.btn-opt').forEach(b => b.disabled = true);
+            document.getElementById('btn-next').classList.remove('hidden');
+        } else {
+            fb.innerHTML = `❌ <strong>算錯囉！</strong><br>再檢查一下算式，或偷看一下小抄。`;
+            fb.className = 'stamp wrong';
+        }
+    }
+
+    function nextLevel() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            loadQuestion();
+        } else {
+            endGame();
+        }
+    }
+
+    function endGame() {
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('end-screen').classList.remove('hidden');
+        document.getElementById('progress-bar').style.width = '100%';
+        document.getElementById('final-score').innerText = score;
+    }
+</script>
+
+</body>
+</html>
